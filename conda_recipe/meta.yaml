@@ -1,0 +1,25 @@
+package:
+  name: maxmind-wrapper
+  version: {{ environ.get('VERSION', '') }}
+
+source:
+  path: ../
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - pip
+    - geoip2
+
+  run:
+    - python
+    - geoip2
+
+test:
+  imports:
+    - maxmind_wrapper
+
+about:
+  home: https://as-github.activision.com/AS/maxmind-wrapper.git
+  license:  BSD 3-clause
