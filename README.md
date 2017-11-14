@@ -1,7 +1,7 @@
 # Wrapper over the Maxmind geoip2 library
 
-This is a python 3 wrapper around Maxmind's geoip2 library.  It automatically updates
-the database every 2 weeks (requires a license).
+This is a python 3 wrapper around Maxmind's geoip2 library (currently only supports City).
+It automatically updates the database periodically (requires a license).
 
 You must set the env var `MAXMIND_LICENSE_KEY`.
 
