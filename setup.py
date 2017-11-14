@@ -14,7 +14,7 @@ setup(name='maxmind-wrapper',
       description='Wrapper around Maxmind for automated updates',
       author='Spencer Stirling',
       packages=[
-          'maxmind-wrapper',
+          'maxmind_wrapper',
       ],
       include_package_data=True,
       install_requires=[
