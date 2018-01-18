@@ -24,13 +24,17 @@ class Reader():
     _maxmind_url = "https://download.maxmind.com/app/geoip_download?edition_id=GeoIP2-City&date={}&suffix=tar.gz&license_key={}"
     _maxmind_db_prefix = "GeoIP2-City.mmdb"
 
-    def __init__(self, refresh_days=14, cache_dir=None):
+    def __init__(self, refresh_days=14, cache_dir=None, maxmind_license_key=None):
 
         # initialize some variables
         self._refresh_seconds = refresh_days*86400
         self._cache_dir = cache_dir
         if not self._cache_dir:
             self._cache_dir = os.path.join(gettempdir(), 'maxmind_wrapper')
+
+        self._maxmind_license_key = maxmind_license_key
+        if self._maxmind_license_key is None:
+            self._maxmind_license_key = os.environ.get('MAXMIND_LICENSE_KEY')  # raises if not exists
 
         # if cache directory already exists, find the latest files
         if os.path.isdir(self._cache_dir):
@@ -43,6 +47,8 @@ class Reader():
         else:
             os.mkdir(self._cache_dir)
             self._last_refresh = 0
+
+        self.is_busy = False  # flag that external services can check
 
         # if files are too old (or missing), then refresh
         if time.time() > self._last_refresh + self._refresh_seconds:
@@ -73,15 +79,16 @@ class Reader():
             return 0
 
     def _refresh(self):
+
         # City db updates every Tues (at least the non-free one does)
         today = dt.date.today()
         lasttues = today - dt.timedelta(days=today.weekday() + 6)
         lasttues = "%4d%02d%02d" % (lasttues.year, lasttues.month, lasttues.day)
-        maxmind_license_key = os.environ.get('MAXMIND_LICENSE_KEY')  # raises if not exists
 
-        url = self._maxmind_url.format(lasttues, maxmind_license_key)
+        url = self._maxmind_url.format(lasttues, self._maxmind_license_key)
 
         print("Fetching from %s" % url)
+        self.is_busy = True
         with urllib.request.urlopen(url) as response:
             tarball_raw = response.read()
 
@@ -94,6 +101,8 @@ class Reader():
 
         self._last_refresh = int(time.time())
         self._save_file(maxmind_db_raw)
+
+        self.is_busy = False
 
     def _save_file(self, maxmind_db_raw):
         if self._cache_dir is None:

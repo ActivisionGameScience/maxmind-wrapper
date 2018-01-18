@@ -1,9 +1,11 @@
 # Wrapper over the Maxmind geoip2 library
 
 This is a python 3 wrapper around Maxmind's geoip2 library (currently only supports City).
-It automatically updates the database periodically (requires a license).
+It automatically updates the database periodically.
 
-You must set the env var `MAXMIND_LICENSE_KEY`.
+You must have a Maxmind license for this to work.  You can pass your license string by
+either setting the environment variable `MAXMIND_LICENSE_KEY` or passing the kwarg `maxmind_license_key`
+to the Reader constructor.
 
 ## Quickstart for Conda users in Linux
 
