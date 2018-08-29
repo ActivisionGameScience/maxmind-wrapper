@@ -24,7 +24,14 @@ class Reader():
     _maxmind_url = "https://download.maxmind.com/app/geoip_download?edition_id=GeoIP2-City&date={}&suffix=tar.gz&license_key={}"
     _maxmind_db_prefix = "GeoIP2-City.mmdb"
 
-    def __init__(self, refresh_days=14, cache_dir=None, maxmind_license_key=None):
+    def __init__(self,
+                 refresh_days=14,
+                 cache_dir=None,
+                 maxmind_license_key=None,
+                 s3_bucket=None,
+                 s3_key=self._maxmind_db_prefix,
+                 aws_access_key_id=None,
+                 aws_secret_access_key=None):
 
         # initialize some variables
         self._refresh_seconds = refresh_days*86400
@@ -32,9 +39,21 @@ class Reader():
         if not self._cache_dir:
             self._cache_dir = os.path.join(gettempdir(), 'maxmind_wrapper')
 
-        self._maxmind_license_key = maxmind_license_key
-        if self._maxmind_license_key is None:
-            self._maxmind_license_key = os.environ.get('MAXMIND_LICENSE_KEY')  # raises if not exists
+        if s3_bucket is not None:  # check if we're updating from s3 instead!
+            self._use_s3 = True
+            self._s3_bucket = s3_bucket
+            self._aws_access_key_id = aws_access_key_id    
+            if self._aws_access_key_id is None:
+                self._aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')  # raises if not exists
+            self._aws_secret_access_key = aws_secret_access_key
+            if self._aws_secret_access_key is None:
+                self._aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')  # raises if not exists
+
+        else:
+            self._use_s3 = False
+            self._maxmind_license_key = maxmind_license_key
+            if self._maxmind_license_key is None:
+                self._maxmind_license_key = os.environ.get('MAXMIND_LICENSE_KEY')  # raises if not exists
 
         # if cache directory already exists, find the latest files
         if os.path.isdir(self._cache_dir):
@@ -80,31 +99,41 @@ class Reader():
 
     def _refresh(self):
 
-        # City db updates every Tues (at least the non-free one does)
-        today = dt.date.today()
-        lasttues = today - dt.timedelta(days=today.weekday() + 6)
-        lasttues = "%4d%02d%02d" % (lasttues.year, lasttues.month, lasttues.day)
+        if self._use_s3:
+            import boto3
+            session = boto3.Session(
+                aws_access_key_id=self._aws_access_key_id,
+                aws_secret_access_key=self._aws_secret_access_key
+            )
+            s3 = session.resource('s3')
+            s3.Object(self._s3_bucket, self._s3_key).get['Body'].read()
 
-        url = self._maxmind_url.format(lasttues, self._maxmind_license_key)
+        else:  # fetch directly from Maxmind
+            # City db updates every Tues (at least the non-free one does)
+            today = dt.date.today()
+            lasttues = today - dt.timedelta(days=today.weekday() + 6)
+            lasttues = "%4d%02d%02d" % (lasttues.year, lasttues.month, lasttues.day)
 
-        print("Fetching from %s" % url)
-        self.is_busy = True
-        with urllib.request.urlopen(url) as response:
-            tarball_raw = response.read()
+            url = self._maxmind_url.format(lasttues, self._maxmind_license_key)
 
-        file_like_object = io.BytesIO(tarball_raw)
-        tar = tarfile.open(fileobj=file_like_object)
-        tar.getnames() 
-        for name in tar.getnames():
-            if name.endswith(self._maxmind_db_prefix):
-                maxmind_db_raw = tar.extractfile(name).read()
+            print("Fetching from %s" % url)
+            self.is_busy = True
+            with urllib.request.urlopen(url) as response:
+                tarball_bytes = response.read()
+
+            file_like_wrapper = io.BytesIO(tarball_bytes)
+            tar = tarfile.open(fileobj=file_like_wrapper)
+            tar.getnames() 
+            for name in tar.getnames():
+                if name.endswith(self._maxmind_db_prefix):
+                    maxmind_db_bytes = tar.extractfile(name).read()
 
         self._last_refresh = int(time.time())
-        self._save_file(maxmind_db_raw)
+        self._save_file(maxmind_db_bytes)
 
         self.is_busy = False
 
-    def _save_file(self, maxmind_db_raw):
+    def _save_file(self, maxmind_db_bytes):
         if self._cache_dir is None:
             return
 
@@ -112,7 +141,7 @@ class Reader():
         maxmind_db_filename = os.path.join(self._cache_dir, self._maxmind_db_prefix + "_" + timestamp)
 
         with open(maxmind_db_filename, 'wb') as f:
-            f.write(maxmind_db_raw)
+            f.write(maxmind_db_bytes)
 
         # reload db
         self._reader_raw = geoip2.database.Reader(maxmind_db_filename)

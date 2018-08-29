@@ -3,9 +3,23 @@
 This is a python 3 wrapper around Maxmind's geoip2 library (currently only supports City).
 It automatically updates the database periodically.
 
-You must have a Maxmind license for this to work.  You can pass your license string by
+You must have a Maxmind license for this to work.
+
+If you want to directly update from Maxmind then pass your license by
 either setting the environment variable `MAXMIND_LICENSE_KEY` or passing the kwarg `maxmind_license_key`
-to the Reader constructor.
+to the Reader constructor (see Usage below).
+
+Better, if you are pulling from your own cache in S3 (see https://github.com/ActivisionGameScience/maxmind-s3-fetcher)
+then you can pass the following arguments to the Reader constructor:
+
+```
+s3_bucket
+s3_key  (defaults to GeoIP2-City.mmdb)
+aws_access_key_id
+aws_secret_access_key
+```
+see Usage below.
+
 
 ## Quickstart for Conda users in Linux
 
@@ -20,8 +34,8 @@ wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
 echo "channels:\n  - ActivisionGameScience\n  - defaults" > ~/.condarc
 
 # create and activate an environment
-conda create -n fooenv python=3.6 maxmind-wrapper ipython -y
-source activate fooenv
+conda create -n py36 python=3.6 maxmind-wrapper ipython -y
+source activate py36
 
 # start ipython and you're cooking!
 ```
@@ -32,7 +46,9 @@ The API is just a simple wrapper around `geoip2`.
 ```
     from maxmind_wrapper.database import Reader
 
-    reader = Reader()  # it will fetch its own data
+    reader = Reader(s3_bucket='foo',
+                    aws_access_key_id='asf3223r4',
+                    aws_secret_access_key='234431324')  # alternatively, pass maxmind_license_key or set MAXMIND_LICENSE_KEY env var
     
     response = reader.city('1.128.0.0') 
 
@@ -40,10 +56,10 @@ The API is just a simple wrapper around `geoip2`.
 ```
 
 Notice that the arguments to `Reader()` are different from Maxmind's API.
-Instead of passing a filename, there are two optional arguments that determine the 
+Instead of passing a filename, there are two additional optional arguments that specify the
 auto-refresh interval and location to write the database locally on disk:
 ```
-    reader = ispdatabase.Reader(refresh_days=14, cache_dir='/tmp')
+    reader = ispdatabase.Reader(..., refresh_days=14, cache_dir='/tmp')
 ```
 
 ## Build
