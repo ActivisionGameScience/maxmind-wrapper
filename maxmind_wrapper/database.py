@@ -109,9 +109,7 @@ class Reader():
                 aws_secret_access_key=self._aws_secret_access_key
             )
             s3 = session.resource('s3')
-            print("starting to read")
             maxmind_db_bytes = s3.Object(self._s3_bucket, self._s3_key).get()['Body'].read()
-            print("end of read")
 
         else:  # fetch directly from Maxmind
             # City db updates every Tues (at least the non-free one does)
