@@ -29,7 +29,7 @@ class Reader():
                  cache_dir=None,
                  maxmind_license_key=None,
                  s3_bucket=None,
-                 s3_key=self._maxmind_db_prefix,
+                 s3_key=None,
                  aws_access_key_id=None,
                  aws_secret_access_key=None):
 
@@ -48,6 +48,9 @@ class Reader():
             self._aws_secret_access_key = aws_secret_access_key
             if self._aws_secret_access_key is None:
                 self._aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')  # raises if not exists
+            self._s3_key = s3_key
+            if self._s3_key is None:
+                self._s3_key = self._maxmind_db_prefix
 
         else:
             self._use_s3 = False
@@ -106,7 +109,9 @@ class Reader():
                 aws_secret_access_key=self._aws_secret_access_key
             )
             s3 = session.resource('s3')
-            s3.Object(self._s3_bucket, self._s3_key).get['Body'].read()
+            print("starting to read")
+            maxmind_db_bytes = s3.Object(self._s3_bucket, self._s3_key).get()['Body'].read()
+            print("end of read")
 
         else:  # fetch directly from Maxmind
             # City db updates every Tues (at least the non-free one does)

@@ -5,20 +5,25 @@ It automatically updates the database periodically.
 
 You must have a Maxmind license for this to work.
 
-If you want to directly update from Maxmind then pass your license by
-either setting the environment variable `MAXMIND_LICENSE_KEY` or passing the kwarg `maxmind_license_key`
-to the Reader constructor (see Usage below).
+There are two ways to use this library:
 
-Better, if you are pulling from your own cache in S3 (see https://github.com/ActivisionGameScience/maxmind-s3-fetcher)
-then you can pass the following arguments to the Reader constructor:
+1. Directly fetch from Maxmind.  In this case you need to pass your license information in by either
+    - setting the environment variable `MAXMIND_LICENSE_KEY`, or 
+    - passing the argument `maxmind_license_key` to the Reader constructor (see Usage below).
 
+2. Fetch from a cache that you maintain in S3.  In that case you need to pass the following arguments to the
+constructor:
 ```
 s3_bucket
 s3_key  (defaults to GeoIP2-City.mmdb)
 aws_access_key_id
 aws_secret_access_key
 ```
-see Usage below.
+
+If you are maintaing your own cache then you might want to look at this repo
+https://github.com/ActivisionGameScience/maxmind-s3-fetcher
+
+See below for Usage details.
 
 
 ## Quickstart for Conda users in Linux
