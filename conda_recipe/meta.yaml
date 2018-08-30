@@ -11,10 +11,12 @@ requirements:
     - setuptools
     - pip
     - geoip2
+    - boto3
 
   run:
     - python
     - geoip2
+    - boto3
 
 test:
   imports:
